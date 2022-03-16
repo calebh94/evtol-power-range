@@ -15,11 +15,12 @@ if __name__ == "__main__":
     evtol = eVTOL(m, n, r)
     evtol.initialize_state(x_init, heading)
 
-    print(evtol.calculate_power(mode='hover'))
-    print(evtol.calculate_power(mode='cruise'))
+    # print(evtol.calculate_power(mode='hover'))
+    # print(evtol.calculate_power(mode='cruise'))
+    #
+    # print(evtol.battery.get_energy_remaining())
 
-    print(evtol.battery.get_energy_remaining())
-
+    mission = []
     evtol.fly(30, 'taxi')
     evtol.fly(5, 'hover')
     evtol.fly(45, 'vertical climb')
@@ -32,8 +33,8 @@ if __name__ == "__main__":
     evtol.fly(5, 'hover')
     evtol.fly(30, 'taxi')
 
-    final_range_reamining = evtol.calculate_range()
-    print(final_range_reamining)
+    final_range_remaining = evtol.calculate_range()
+    print(final_range_remaining)
     print(evtol.mission)
     print('Total Energy Used in kWh: {}'.format(evtol.battery.get_energy_used()))
     print('Predicted Range Remaining in km: {}'.format(evtol.calculate_range()))

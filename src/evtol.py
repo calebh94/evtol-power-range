@@ -106,13 +106,12 @@ class eVTOL:
 
     def _calculate_range(self):
         method = 2
-
         # temp_batt = battery(self.battery.m, self.battery.E_total)
         power_cruise_left = self.calculate_power(mode='cruise')
         #TODO: time_left an input
         time_left_min = 30
         time_left = time_left_min * 60 / 60 / 60  # 5 minute cruise left
-        # energy_use_est = self.battery._calculate_energy_use(power_cruise_left, time_left)
+        # energy_use_est = self.battery._calculate_enefrgy_use(power_cruise_left, time_left)
         # energy_use_est = 121.40
         # energy_use_est = 25
         #TODO: MAKE INPUTS FOR ALTITUDE AND TIMING TO CHANGE MISSION TYPE
@@ -237,4 +236,7 @@ class eVTOL:
 
     def get_mission(self):
         return self.mission
+
+    def set_cruise_velocity(self, var1, var2):
+        print('NOT SETUP YET')
 
