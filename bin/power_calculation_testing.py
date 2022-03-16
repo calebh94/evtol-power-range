@@ -10,9 +10,10 @@ if __name__ == "__main__":
     n = 6
     r = 0.65  # meters
     x_init = [0,0, 100]
+    heading = 0
     # Model initialize
     evtol = eVTOL(m, n, r)
-    evtol.initialize_state(x_init)
+    evtol.initialize_state(x_init, heading)
 
     print(evtol.calculate_power(mode='hover'))
     print(evtol.calculate_power(mode='cruise'))
@@ -86,10 +87,20 @@ if __name__ == "__main__":
 
     fig3 = plt.figure(12)
     plt.plot(ts, xs_new)
-    fig4 = plt.figure(13)
+    plt.title("X Position over Flight")
+    plt.xlabel("Time")
+    fig4 = plt.figure(16)
+    plt.plot(ts, ys_new)
+    plt.title("Y Position over Flight")
+    plt.xlabel("Time")
+    fig6 = plt.figure(13)
     plt.plot(ts, zs_new)
+    plt.title("Altitude over Flight")
+    plt.xlabel("Time")
     fig5 = plt.figure(14)
     plt.plot(ts, plot_ranges)
+    plt.title("Predicted Range over Flight")
+    plt.xlabel("Time")
 
     plt.show()
 

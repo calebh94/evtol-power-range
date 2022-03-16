@@ -14,6 +14,7 @@ class eVTOL:
         self.W = m * self.g
         self.DL = self.W / (n_rotors * 2*pi*pow(r_rotors, 2))
         self.x = [0,0,0]
+        self.heading = 0
         self.density = self._get_density(h=0)
 
         self.battery = Battery(0.33 * m, total_energy=0.33 * m * 260 / 1000)
@@ -50,8 +51,9 @@ class eVTOL:
                                 (5, 'hover'),
                                 (30, 'taxi')]
 
-    def initialize_state(self, x_init: tuple):
+    def initialize_state(self, x_init: tuple, heading: float):
         self.x = x_init
+        self.heading = heading
         self.density = self._get_density(self.x[2])
 
     def calculate_power(self, mode: str) -> float:
@@ -207,17 +209,20 @@ class eVTOL:
             x = x_last.copy()
         elif mode == 'cruise':
             x = x_last.copy()
-            x[0] = x_last[0] + self.V_cruise * time
+            x[0] = x_last[0] + self.V_cruise * time * cos(self.heading)
+            x[1] = x_last[1] + self.V_cruise * time * sin(self.heading)
         elif mode == 'vertical climb':
             x = x_last.copy()
             x[2] = x_last[2] + self.ROC_TO * time
         elif mode == 'climb':
             x = x_last.copy()
-            x[0] = x_last[0] + self.V_climb * cos(self.climb_angle) * time
+            x[0] = x_last[0] + self.V_climb * cos(self.climb_angle) * time * cos(self.heading)
+            x[1] = x_last[1] + self.V_climb * cos(self.climb_angle) * time * sin(self.heading)
             x[2] = x_last[2] + self.ROC_climb * time
         elif mode == 'descent':
             x = x_last.copy()
-            x[0] = x_last[0] + self.V_climb * cos(self.climb_angle) * time
+            x[0] = x_last[0] + self.V_climb * cos(self.climb_angle) * time * cos(self.heading)
+            x[1] = x_last[1] + self.V_climb * cos(self.climb_angle) * time * sin(self.heading)
             x[2] = x_last[2] + self.ROC_descend * time
         elif mode == 'vertical descent':
             x = x_last.copy()
