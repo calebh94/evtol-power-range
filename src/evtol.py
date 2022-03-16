@@ -25,6 +25,7 @@ class eVTOL:
         self.V_cruise = 72  # m/s
         self.LD_cruise = 16
         self.ROC_TO = 0.5  # m/s
+        self.ROC_LD = -0.5
 
         # Climb
         self.ROC_climb = 4.5
@@ -32,7 +33,22 @@ class eVTOL:
         self.V_climb = self.ROC_climb / sin(self.climb_angle)  # m/s
         self.LD_climb = 15
 
+        # Descend
+        self.ROC_descend = -4.5
+
         self.mission = []
+
+        self.planned_mission =[(30, 'taxi'),
+                                (5, 'hover'),
+                                (45, 'vertical climb'),
+                                (15, 'vertical climb'),  # TODO: TRANSITION
+                                (105, 'climb'),
+                                (1500 - 105, 'cruise'),
+                                (105, 'descent'),
+                                (15, 'vertical descent'),  # TODO: Transition reverse
+                                (45, 'vertical descent'),
+                                (5, 'hover'),
+                                (30, 'taxi')]
 
     def initialize_state(self, x_init: tuple):
         self.x = x_init
@@ -49,6 +65,12 @@ class eVTOL:
             power = self._vertical_climb_power()
         elif mode == 'climb':
             power = self._climb_power()
+        elif mode == 'descent':
+            power = self._cruise_power()
+        elif mode == 'vertical descent':
+            power = self._vertical_descent_power()
+        elif mode == 'taxi':
+            power = self._taxi_power()
         else:
             power = 0
 
@@ -81,6 +103,8 @@ class eVTOL:
         return range
 
     def _calculate_range(self):
+        method = 2
+
         # temp_batt = battery(self.battery.m, self.battery.E_total)
         power_cruise_left = self.calculate_power(mode='cruise')
         #TODO: time_left an input
@@ -89,7 +113,31 @@ class eVTOL:
         # energy_use_est = self.battery._calculate_energy_use(power_cruise_left, time_left)
         # energy_use_est = 121.40
         # energy_use_est = 25
-        energy_use_est = self.battery.get_energy_remaining()
+        #TODO: MAKE INPUTS FOR ALTITUDE AND TIMING TO CHANGE MISSION TYPE
+        mission_to_land = [(105, 'descent'),
+                                (15, 'vertical descent'),  # TODO: Transition reverse
+                                (45, 'vertical descent'),
+                                (5, 'hover'),
+                                (30, 'taxi')]
+        #TODO: CREATE TEMP BATTERY  MODEL AND SIM THESE POWERS/ENERGY REQUIREMENTS
+        # solve this using surrogatge instead?
+        temp_battery = Battery(self.battery.m, self.battery.E_total)
+        temp_battery.E = self.battery.E
+        for mission in mission_to_land:
+            time = mission[0]
+            time_hrs = time / 60 / 60  # conversion of seconds to hours
+            mode = mission[1]
+            power = self.calculate_power(mode)
+            temp_battery.run(power, time_hrs)
+        if method == 1:
+            # energy_use_est = self.battery.get_energy_remaining()
+            energy_use_est = self.battery.get_useful_energy_remaining()
+
+        elif method == 2:
+            # energy_use_est = temp_battery.get_energy_remaining()
+            energy_use_est = temp_battery.get_useful_energy_remaining()
+        else:
+            energy_use_est = 0  # OTHER OPTIONS FROM ABOVE MOVE HERE
         energy_density_est = energy_use_est / \
                              (self.battery.m * self.battery.bat_eff * self.battery.DOD) * 1000  #TODO: duoble check power and energy units everywhere
         # energy_density_est = 91.19
@@ -124,6 +172,20 @@ class eVTOL:
         power = self.W / self.eff_climb * (self.ROC_climb + self.V_climb / self.LD_climb)
         return power
 
+    def _vertical_descent_power(self):
+        """ Estimated from helicopter theory (ex. W. Johnson, Helicopter Theory, 1980.
+        ) - Momentum Theory"""
+        if not -2 <= self.ROC_LD <= 0:
+            warnings.warn("The desent power calculation is only valid for ROC Landing to be between "
+                          "-2 and 0, it is set at {}".format(self.ROC_LD))
+
+        vh = sqrt(self.DL / (2*self.density))
+        k = [0.974, -1.125, -1.372, -1.718, -0.655]
+        vivh = k[0] + sum([k[i]*(self.ROC_LD/vh)**i for i in range(1,5)])
+        power_factor = (self.ROC_LD / vh + vivh)
+        power = self._hover_power() * power_factor
+        return power
+
     def _get_density(self, h: float) -> float:
         """ Calculation density from Earth Atmosphere Model (NASA)
         density in kg/m^3
@@ -141,7 +203,7 @@ class eVTOL:
 
     def _update_state(self, mode, time):
         x_last = self.x.copy()
-        if mode == 'hover':
+        if mode == 'hover' or mode =='taxi':
             x = x_last.copy()
         elif mode == 'cruise':
             x = x_last.copy()
@@ -153,6 +215,13 @@ class eVTOL:
             x = x_last.copy()
             x[0] = x_last[0] + self.V_climb * cos(self.climb_angle) * time
             x[2] = x_last[2] + self.ROC_climb * time
+        elif mode == 'descent':
+            x = x_last.copy()
+            x[0] = x_last[0] + self.V_climb * cos(self.climb_angle) * time
+            x[2] = x_last[2] + self.ROC_descend * time
+        elif mode == 'vertical descent':
+            x = x_last.copy()
+            x[2] = x_last[2] + self.ROC_LD * time
         else:
             x = x_last.copy()
             warnings.warn("The provided mode has not been setup yet in update_state(): {}".format(mode))

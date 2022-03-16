@@ -12,6 +12,7 @@ class Battery:
         self.DOD = 1.00 - (self.soc_limit / 100)  # Depth of Discharge
         self.SOH = 1.00  # State of Health #TODO: not used for now
 
+
     def run(self, power, time):
         energy_used = self._calculate_energy_use(power, time)
         self.E = self.E - energy_used
@@ -23,9 +24,14 @@ class Battery:
     def get_energy_remaining(self):
         return self.E
 
+    def get_useful_energy_remaining(self):
+        return self.E - self.E_total*(1-self.DOD)
+
+    def get_energy_used(self):
+        return self.E_total - self.E
+
     def get_SOC(self):
         return round(self.E / self.E_total * 100, 2)  # SOC in percentage
-
 
     def _calculate_energy_use(self, power, time):
         """ Power in kWH and time in hours"""

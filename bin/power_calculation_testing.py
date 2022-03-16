@@ -19,15 +19,24 @@ if __name__ == "__main__":
 
     print(evtol.battery.get_energy_remaining())
 
-    evtol.fly(20, 'hover')
-    evtol.fly(30, 'vertical climb')
-    #TODO: TRANSITION
-    evtol.fly(60, 'climb')
-    evtol.fly(200, 'cruise')
+    evtol.fly(30, 'taxi')
+    evtol.fly(5, 'hover')
+    evtol.fly(45, 'vertical climb')
+    evtol.fly(15, 'vertical climb') #TODO: TRANSITION
+    evtol.fly(105, 'climb')
+    evtol.fly(1500-105, 'cruise')
+    evtol.fly(105, 'descent')
+    evtol.fly(15, 'vertical descent')   #TODO: Transition reverse
+    evtol.fly(45, 'vertical descent')
+    evtol.fly(5, 'hover')
+    evtol.fly(30, 'taxi')
 
     final_range_reamining = evtol.calculate_range()
     print(final_range_reamining)
     print(evtol.mission)
+    print('Total Energy Used in kWh: {}'.format(evtol.battery.get_energy_used()))
+    print('Predicted Range Remaining in km: {}'.format(evtol.calculate_range()))
+    #TODO: ARE WE IGNORING THE ENERGY BELOW 20% OR NOT??? I THOUGHT I WAS!?
 
     # (tuple([mode, round(time, 2), round(power, 0),
     #                        round(soc_remaining, 2), round(range_remaining, 2)]))
@@ -44,10 +53,13 @@ if __name__ == "__main__":
     fig2 = plt.figure(11)
     plt.plot(xs,zs)
 
+    predicted_ranges = [p[4] for p in evtol.mission]
+
     ts=[0]
     xs_new = [x_init[0]]
     ys_new = [x_init[1]]
     zs_new = [x_init[2]]
+    plot_ranges = [0]
 
     index = 0
     for time in times:
@@ -57,6 +69,7 @@ if __name__ == "__main__":
         new_xs = [xs[index]] * len(new_times)
         new_ys = [ys[index]] * len(new_times)
         new_zs = [zs[index]] * len(new_times)
+        ranges = [predicted_ranges[index]] * len(new_times)
         #TODO: SMOOTHING USING NP.LINSPACE
         # new_xs = np.linspace(xs[index], xs[index+1], len(new_times))
         # new_ys = np.linspace(ys[index], ys[index+1], len(new_times))
@@ -67,12 +80,16 @@ if __name__ == "__main__":
             ys_new.append(j)
         for j in new_zs:
             zs_new.append(j)
+        for j in ranges:
+            plot_ranges.append(j)
         index+=1
 
     fig3 = plt.figure(12)
     plt.plot(ts, xs_new)
     fig4 = plt.figure(13)
     plt.plot(ts, zs_new)
+    fig5 = plt.figure(14)
+    plt.plot(ts, plot_ranges)
 
     plt.show()
 
