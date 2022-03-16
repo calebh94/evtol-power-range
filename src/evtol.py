@@ -1,37 +1,10 @@
-from math import pi, sqrt
-
-
-class battery:
-    def __init__(self, m: float, total_energy: float):
-        self.m = m
-        self.E = total_energy  # Energy in kiloWatt-Hours (kWH)
-        self.E_total = total_energy
-        self.soc_limit = 20
-        self.bat_eff = 0.95
-        self.eff_total = 0.65
-        self.DOD = 1.00 - (self.soc_limit / 100)  # Depth of Discharge
-        self.SOH = 1.00  # State of Health #TODO: not used for now
-
-    def run(self, power, time):
-        energy_used = self._calculate_energy_use(power, time)
-        self.E = self.E - energy_used
-        if self.get_SOC() < self.soc_limit:
-            print('SOC is below the limit! {} < {}'.format(self.get_SOC(), self.soc_limit))
-            #TODO: replace with warning or return a 1 vs. 0
-        return energy_used
-
-    def get_energy_remaining(self):
-        return self.E
-
-    def get_SOC(self):
-        return round(self.E / self.E_total * 100, 2)  # SOC in percentage
-
-
-    def _calculate_energy_use(self, power, time):
-        """ Power in kWH and time in hours"""
-        power_bat = power / self.eff_total
-        energy_used = power_bat * time
-        return energy_used
+""" eVTOL Model for Power and Energy Range Prediction
+Power calculations from Bruhl, Fricke, Schultz, "Air taxi flight performance modeling and
+application", 2021.
+"""
+import warnings
+from math import pi, sqrt, sin, cos
+from src.Battery import Battery
 
 
 class eVTOL:
@@ -40,15 +13,24 @@ class eVTOL:
         self.m = m
         self.W = m * self.g
         self.DL = self.W / (n_rotors * 2*pi*pow(r_rotors, 2))
-        self.x = tuple([0,0,0])
+        self.x = [0,0,0]
+        self.density = self._get_density(h=0)
 
-        self.battery = battery(0.33 * m, total_energy=0.33 * m * 260 / 1000)
+        self.battery = Battery(0.33 * m, total_energy=0.33 * m * 260 / 1000)
 
-        # Flight Performance Parameters to set later
+        # Flight Performance Parameters to set later #TODO: READ FROM models/ INPUT
         self.eff_hover = 0.70
         self.eff_cruise = 0.80
+        self.eff_climb = 0.75
         self.V_cruise = 72  # m/s
         self.LD_cruise = 16
+        self.ROC_TO = 0.5  # m/s
+
+        # Climb
+        self.ROC_climb = 4.5
+        self.climb_angle = 8  # degrees
+        self.V_climb = self.ROC_climb / sin(self.climb_angle)  # m/s
+        self.LD_climb = 15
 
         self.mission = []
 
@@ -63,6 +45,10 @@ class eVTOL:
             power = self._hover_power()
         elif mode == 'cruise':
             power = self._cruise_power()
+        elif mode == 'vertical climb':
+            power = self._vertical_climb_power()
+        elif mode == 'climb':
+            power = self._climb_power()
         else:
             power = 0
 
@@ -71,20 +57,22 @@ class eVTOL:
 
     def fly(self, time: float, mode: str):
         """ Fly a flight mode for a amount of time (in seconds)"""
-        time = time / 60 / 60  # conversion of seconds to hours
+        time_hrs = time / 60 / 60  # conversion of seconds to hours
         power = self.calculate_power(mode)
         # energy_used = power * time
-        self.battery.run(power, time)
+        self.battery.run(power, time_hrs)
         soc_remaining = self.battery.get_SOC()
         print('SOC remaining: {}%'.format(soc_remaining))
         range_remaining = self.calculate_range()
         print('Range remaining: {} km'.format(range_remaining))
 
-        self.mission.append(tuple([mode, round(time,2), round(power, 0),
-                                   round(soc_remaining,2), round(range_remaining,2)]))
+        self.x = self._update_state(mode, time)
+        self.density = self._get_density(self.x[2])
 
-        #TODO: update state
-        self.x = self.x
+        self.mission.append(tuple([mode, round(time,2), round(power, 0),
+                                   round(soc_remaining,2), round(range_remaining,2),
+                                   self.x]))
+        #TODO: SELF.X is not copying it is being attached using a pointer and syaing the same throughout appending
         return self.x
 
     def calculate_range(self):
@@ -120,6 +108,21 @@ class eVTOL:
         power = self.W * self.V_cruise / (self.LD_cruise * self.eff_cruise)
         return power
 
+    def _taxi_power(self):
+        power = 0.1 * self._cruise_power()
+        return power
+
+    def _vertical_climb_power(self):
+        """ Estimated from helicopter theory (ex. W. Johnson, Helicopter Theory, 1980.
+        ) - Momentum Theory"""
+        vh = sqrt(self.DL / (2*self.density))
+        power_factor = (self.ROC_TO / (2 * vh) + sqrt((self.ROC_TO/(2*vh))**2+1))
+        power = self._hover_power() * power_factor
+        return power
+
+    def _climb_power(self):
+        power = self.W / self.eff_climb * (self.ROC_climb + self.V_climb / self.LD_climb)
+        return power
 
     def _get_density(self, h: float) -> float:
         """ Calculation density from Earth Atmosphere Model (NASA)
@@ -135,6 +138,25 @@ class eVTOL:
         p = 101.29 * pow((t + 273.1) / 288.08, 5.256)
         density = p / (0.2869 * (t+273.1))
         return density
+
+    def _update_state(self, mode, time):
+        x_last = self.x.copy()
+        if mode == 'hover':
+            x = x_last.copy()
+        elif mode == 'cruise':
+            x = x_last.copy()
+            x[0] = x_last[0] + self.V_cruise * time
+        elif mode == 'vertical climb':
+            x = x_last.copy()
+            x[2] = x_last[2] + self.ROC_TO * time
+        elif mode == 'climb':
+            x = x_last.copy()
+            x[0] = x_last[0] + self.V_climb * cos(self.climb_angle) * time
+            x[2] = x_last[2] + self.ROC_climb * time
+        else:
+            x = x_last.copy()
+            warnings.warn("The provided mode has not been setup yet in update_state(): {}".format(mode))
+        return x
 
     def set_hover_efficiency(self, eff):
         self.eff_hover = eff
