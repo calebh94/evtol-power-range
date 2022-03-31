@@ -51,6 +51,7 @@ if __name__ == "__main__":
 
     fig = plt.figure(10)
     times = [x[1] for x in evtol.mission]
+    socs = [x[3] for x in evtol.mission]
     states = [x[5] for x in evtol.mission]
     xs = [x[0] for x in states]
     ys = [x[1] for x in states]
@@ -71,9 +72,12 @@ if __name__ == "__main__":
 
     index = 0
     predicted_ranges.insert(0,0)
-    xs.insert(0,0)
-    ys.insert(0,0)
-    zs.insert(0,0)
+    socs.insert(100,0)
+    xs.insert(x_init[0],0)
+    ys.insert(x_init[1],0)
+    zs.insert(x_init[2],0)
+
+    plot_socs = [100]
 
     for time in times:
         new_times = np.linspace(ts[-1], ts[-1]+time,time+1)
@@ -88,6 +92,9 @@ if __name__ == "__main__":
         new_xs = np.linspace(xs[index], xs[index+1], len(new_times))
         new_ys = np.linspace(ys[index], ys[index+1], len(new_times))
         new_zs = np.linspace(zs[index], zs[index+1], len(new_times))
+
+        new_socs = np.linspace(socs[index], socs[index+1], len(new_times))
+
         for j in new_xs:
             xs_new.append(j)
         for j in new_ys:
@@ -96,6 +103,8 @@ if __name__ == "__main__":
             zs_new.append(j)
         for j in ranges:
             plot_ranges.append(j)
+        for j in new_socs:
+            plot_socs.append(j)
         index+=1
 
     fig3 = plt.figure(12)
@@ -113,6 +122,10 @@ if __name__ == "__main__":
     fig5 = plt.figure(14)
     plt.plot(ts, plot_ranges)
     plt.title("Predicted Range over Flight")
+    plt.xlabel("Time")
+    fig7 = plt.figure(17)
+    plt.plot(ts, plot_socs)
+    plt.title("SOC over Flight")
     plt.xlabel("Time")
 
     plt.show()
