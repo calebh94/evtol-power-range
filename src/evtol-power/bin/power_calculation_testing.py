@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.evtol import eVTOL
+from scripts.evtol import eVTOL
 
 import matplotlib.pyplot as plt
 

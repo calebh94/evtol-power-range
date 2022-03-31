@@ -4,10 +4,11 @@ application", 2021.
 """
 import warnings
 from math import pi, sqrt, sin, cos
-from src.Battery import Battery
+from Battery import Battery
 
 RAD2DEG = 180 / pi
 DEG2RAD = pi / 180
+
 
 class eVTOL:
     def __init__(self, m: float, n_rotors: int, r_rotors: float):

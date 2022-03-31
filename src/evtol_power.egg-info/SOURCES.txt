@@ -1,0 +1,9 @@
+LICENSE
+README.md
+pyproject.toml
+setup.py
+src/evtol_power.egg-info/PKG-INFO
+src/evtol_power.egg-info/SOURCES.txt
+src/evtol_power.egg-info/dependency_links.txt
+src/evtol_power.egg-info/requires.txt
+src/evtol_power.egg-info/top_level.txt

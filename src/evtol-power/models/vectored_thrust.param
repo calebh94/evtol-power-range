@@ -1,0 +1,22 @@
+#TODO: Make into file
+
+Here are parameters from Seulki
+
+#### Joby S4
+- Aircraft type: eVTOL
+- Pilot: 1
+- Passengers: 4
+- Overall length: 6.4 m (21 ft) *Aviation Week
+- Wingspan: 11.6 m (38 ft) *Aviation Week
+- Tail wing: V-tail
+- Maximum payload: 453 kg (1,000 lbs)
+- Empty weight: 1,724 kg (3,800 lbs)
+- MTOW: 2,177 kg (4,800 lbs)
+- Battery packs weight: 848.2 kg (1,870 lbs)
+- Energy density of one battery pack: 235 Wh/kg
+- Total battery energy: 200 kWh (235 Wh/kg * 848.2 kg / 1000)
+- Maximum speed: 322 km/h (200 mph)
+- Cruise power: 174 kW @ 322 km/h
+- Range: 241.4 km (150 miles)
+- Propellers: 6 tiltrotors, 4 propellers tilt ertically including the entire motor nacelle, 2 propellers tilt vertically with a linkage mechanism
+- Motors: 6 high performance electric motors

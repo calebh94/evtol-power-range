@@ -1,0 +1,21 @@
+Metadata-Version: 2.1
+Name: evtol-power
+Version: 0.0.2
+Summary: eVTOL Vehicle Power Calculations for Trajectory Optimization
+Home-page: https://github.com/calebh94/evtol-power-range
+Author: Caleb Harris
+Author-email: harris.caleb84@gmail.com
+License: MIT
+Keywords: vtol,battery,power,trajectory optimization
+Platform: UNKNOWN
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Topic :: Scientific/Engineering :: Trajectory Optimization
+Requires-Python: >= 3.5
+License-File: LICENSE
+
+# eVTOL Power and Range Estimation Model
+by Caleb Harris, Georgia Institute of Technology, 2022
+
