@@ -27,7 +27,11 @@ if __name__ == "__main__":
     # evtol.fly(15, 'vertical climb')
     evtol.fly(45, 'transition forward')
     evtol.fly(105, 'climb')
-    evtol.fly(1500-105, 'cruise')
+    # evtol.fly(1500-105, 'cruise')
+    cruise_time = 1500-105
+    evtol.fly(cruise_time*0.333, 'cruise')
+    evtol.fly(cruise_time*0.333, 'cruise')
+    evtol.fly(cruise_time*0.333, 'cruise')
     evtol.fly(105, 'descent')
     # evtol.fly(15, 'vertical descent')
     evtol.fly(45, 'transition reverse')
@@ -67,19 +71,23 @@ if __name__ == "__main__":
 
     index = 0
     predicted_ranges.insert(0,0)
+    xs.insert(0,0)
+    ys.insert(0,0)
+    zs.insert(0,0)
+
     for time in times:
         new_times = np.linspace(ts[-1], ts[-1]+time,time+1)
         for i in new_times:
             ts.append(i)
-        new_xs = [xs[index]] * len(new_times)
-        new_ys = [ys[index]] * len(new_times)
-        new_zs = [zs[index]] * len(new_times)
+        # new_xs = [xs[index]] * len(new_times)
+        # new_ys = [ys[index]] * len(new_times)
+        # new_zs = [zs[index]] * len(new_times)
         ranges = np.linspace(predicted_ranges[index], predicted_ranges[index+1], len(new_times))
         # ranges = [predicted_ranges[index+1]] * len(new_times)
         #TODO: SMOOTHING USING NP.LINSPACE
-        # new_xs = np.linspace(xs[index], xs[index+1], len(new_times))
-        # new_ys = np.linspace(ys[index], ys[index+1], len(new_times))
-        # new_zs = np.linspace(zs[index], zs[index+1], len(new_times))
+        new_xs = np.linspace(xs[index], xs[index+1], len(new_times))
+        new_ys = np.linspace(ys[index], ys[index+1], len(new_times))
+        new_zs = np.linspace(zs[index], zs[index+1], len(new_times))
         for j in new_xs:
             xs_new.append(j)
         for j in new_ys:
