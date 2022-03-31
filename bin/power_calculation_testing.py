@@ -23,6 +23,8 @@ if __name__ == "__main__":
     mission = []
     evtol.fly(30, 'taxi')
     evtol.fly(5, 'hover')
+    # (z_alt_now - z_alt_des) / evtol.ROC_climb
+
     evtol.fly(45, 'vertical climb')
     # evtol.fly(15, 'vertical climb')
     evtol.fly(45, 'transition forward')
@@ -72,10 +74,10 @@ if __name__ == "__main__":
 
     index = 0
     predicted_ranges.insert(0,0)
-    socs.insert(100,0)
-    xs.insert(x_init[0],0)
-    ys.insert(x_init[1],0)
-    zs.insert(x_init[2],0)
+    socs.insert(0,100)
+    xs.insert(0,x_init[0])
+    ys.insert(0,x_init[1])
+    zs.insert(0,x_init[2])
 
     plot_socs = [100]
 
