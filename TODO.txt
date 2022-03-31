@@ -1,1 +1,4 @@
 # Look into https://github.com/castacks/cvar-energy-risk-deep-model
+
+#TODO: add a parameter file to change model parameters quickly
+

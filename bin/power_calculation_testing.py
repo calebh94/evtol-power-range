@@ -24,11 +24,13 @@ if __name__ == "__main__":
     evtol.fly(30, 'taxi')
     evtol.fly(5, 'hover')
     evtol.fly(45, 'vertical climb')
-    evtol.fly(15, 'vertical climb') #TODO: TRANSITION
+    # evtol.fly(15, 'vertical climb')
+    evtol.fly(45, 'transition forward')
     evtol.fly(105, 'climb')
     evtol.fly(1500-105, 'cruise')
     evtol.fly(105, 'descent')
-    evtol.fly(15, 'vertical descent')   #TODO: Transition reverse
+    # evtol.fly(15, 'vertical descent')
+    evtol.fly(45, 'transition reverse')
     evtol.fly(45, 'vertical descent')
     evtol.fly(5, 'hover')
     evtol.fly(30, 'taxi')
@@ -64,6 +66,7 @@ if __name__ == "__main__":
     plot_ranges = [0]
 
     index = 0
+    predicted_ranges.insert(0,0)
     for time in times:
         new_times = np.linspace(ts[-1], ts[-1]+time,time+1)
         for i in new_times:
@@ -71,7 +74,8 @@ if __name__ == "__main__":
         new_xs = [xs[index]] * len(new_times)
         new_ys = [ys[index]] * len(new_times)
         new_zs = [zs[index]] * len(new_times)
-        ranges = [predicted_ranges[index]] * len(new_times)
+        ranges = np.linspace(predicted_ranges[index], predicted_ranges[index+1], len(new_times))
+        # ranges = [predicted_ranges[index+1]] * len(new_times)
         #TODO: SMOOTHING USING NP.LINSPACE
         # new_xs = np.linspace(xs[index], xs[index+1], len(new_times))
         # new_ys = np.linspace(ys[index], ys[index+1], len(new_times))

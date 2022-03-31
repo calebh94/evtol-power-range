@@ -6,6 +6,8 @@ import warnings
 from math import pi, sqrt, sin, cos
 from src.Battery import Battery
 
+RAD2DEG = 180 / pi
+DEG2RAD = pi / 180
 
 class eVTOL:
     def __init__(self, m: float, n_rotors: int, r_rotors: float):
@@ -16,6 +18,15 @@ class eVTOL:
         self.x = [0,0,0]
         self.heading = 0
         self.density = self._get_density(h=0)
+
+        self.CD = 0.039
+        self.Cd = 0.015
+        self.A = 8.0  # m^2
+        self.N = 5
+        self.n = 6
+        self.c = 0.3
+        self.d_rotor = 2*r_rotors
+        self.S = 11.0  # m^2
 
         self.battery = Battery(0.33 * m, total_energy=0.33 * m * 260 / 1000)
 
@@ -30,12 +41,20 @@ class eVTOL:
 
         # Climb
         self.ROC_climb = 4.5
-        self.climb_angle = 8  # degrees
+        self.climb_angle = 8*DEG2RAD  # radians
         self.V_climb = self.ROC_climb / sin(self.climb_angle)  # m/s
         self.LD_climb = 15
 
         # Descend
         self.ROC_descend = -4.5
+        self.descend_angle = self.climb_angle
+        self.V_descend = abs(self.ROC_descend) / sin(self.descend_angle)  # m/s
+
+        # Transition
+        self.V_transition = self.V_cruise-self.V_climb #TODO: CHECK THIS, SHOULD BE A TRANSITION FROM V_TALL TO CRUISE (or climb for Bruhl) (SEE TEM WORK)
+        self.theta_transition = 82 * DEG2RAD  # radians
+        self.eff_transition = 0.65
+        self.M_tip = 0.55
 
         self.mission = []
 
@@ -73,6 +92,10 @@ class eVTOL:
             power = self._vertical_descent_power()
         elif mode == 'taxi':
             power = self._taxi_power()
+        elif mode == 'transition forward':
+            power = self._transition_forward_power()
+        elif 'transition reverse':
+            power = self._transition_reverse_power()
         else:
             power = 0
 
@@ -116,7 +139,7 @@ class eVTOL:
         # energy_use_est = 25
         #TODO: MAKE INPUTS FOR ALTITUDE AND TIMING TO CHANGE MISSION TYPE
         mission_to_land = [(105, 'descent'),
-                                (15, 'vertical descent'),  # TODO: Transition reverse
+                                (45, 'transition reverse'),  # TODO: Transition reverse
                                 (45, 'vertical descent'),
                                 (5, 'hover'),
                                 (30, 'taxi')]
@@ -187,6 +210,52 @@ class eVTOL:
         power = self._hover_power() * power_factor
         return power
 
+    def _transition_forward_power(self):
+        """ stability has to be preserved while avoiding any
+            loss of altitude
+            using theory from A. M. Kamal and A. Ramirez-Serrano, “Design methodology for hybrid
+            (vtol + fixed wing) unmanned aerial vehicles,” in Aeronautics and
+            Aerospace Open Access Journal, 2018."""
+        self.V_transition = self.V_climb
+        V_tip = self.V_transition / self.M_tip  #TODO: CHECK THIS
+        solidity = self.N * self.c / (pi * self.d_rotor/2)*self.n
+        mu = self.V_climb * cos(self.theta_transition) / V_tip
+        Cd_transition = self.Cd
+        CD_transition = self.CD
+        rho = self._get_density(self.x[2])
+
+        v_term = -(self.V_transition**2 / 2) + \
+                 sqrt((self.V_transition**2 / 2)**2 + (self.W / (sin(self.theta_transition)*2*rho*self.A))**2)
+        induced = self.W / (self.eff_transition * sin(self.theta_transition)) * sqrt(v_term)
+
+        profile = rho*self.A*V_tip**3 * (solidity*Cd_transition / 8 * (1+4.6*mu**2))
+
+        drag = 1/2 * rho * self.S * self.V_transition**2 * CD_transition
+
+        power = induced + drag + profile
+        return power #target 1431 kw
+
+    def _transition_reverse_power(self):  #TODO: MERGE WITH OTHER TRANSITOIN WITH CHANGING VELOCITY
+        self.V_transition = abs(self.V_descend)
+        V_tip = self.V_transition / self.M_tip  # TODO: CHECK THIS
+        solidity = self.N * self.c / (pi * self.d_rotor / 2) * self.n
+        mu = self.V_climb * cos(self.theta_transition) / V_tip
+        Cd_transition = self.Cd
+        CD_transition = self.CD
+        rho = self._get_density(self.x[2])
+
+        v_term = -(self.V_transition ** 2 / 2) + \
+                 sqrt((self.V_transition ** 2 / 2) ** 2 + (
+                             self.W / (sin(self.theta_transition) * 2 * rho * self.A)) ** 2)
+        induced = self.W / (self.eff_transition * sin(self.theta_transition)) * sqrt(v_term)
+
+        profile = rho * self.A * V_tip ** 3 * (solidity * Cd_transition / 8 * (1 + 4.6 * mu ** 2))
+
+        drag = 1 / 2 * rho * self.S * self.V_transition ** 2 * CD_transition
+
+        power = induced + drag + profile
+        return power  # target ??
+
     def _get_density(self, h: float) -> float:
         """ Calculation density from Earth Atmosphere Model (NASA)
         density in kg/m^3
@@ -226,6 +295,14 @@ class eVTOL:
         elif mode == 'vertical descent':
             x = x_last.copy()
             x[2] = x_last[2] + self.ROC_LD * time
+        elif mode == 'transition forward':
+            x = x_last.copy()
+            x[0] = x_last[0] + self.V_climb * time * cos(self.heading)
+            x[1] = x_last[1] + self.V_climb * time * sin(self.heading)
+        elif mode == 'transition reverse':
+            x = x_last.copy()
+            x[0] = x_last[0] + self.V_descend * time * cos(self.heading)
+            x[1] = x_last[1] + self.V_descend * time * sin(self.heading)
         else:
             x = x_last.copy()
             warnings.warn("The provided mode has not been setup yet in update_state(): {}".format(mode))
