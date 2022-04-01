@@ -1,6 +1,6 @@
 import numpy as np
 
-from scripts.evtol import eVTOL
+from evtol import eVTOL
 
 import matplotlib.pyplot as plt
 
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     x_init = [0,0, 100]
     heading = 0
     # Model initialize
-    evtol = eVTOL(m, n, r)
+    evtol = eVTOL(m, soc_init=100, soc_limit=20, mission=[], energy_density=260)
     evtol.initialize_state(x_init, heading)
 
     # print(evtol.calculate_power(mode='hover'))

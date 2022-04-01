@@ -11,27 +11,35 @@ DEG2RAD = pi / 180
 
 
 class eVTOL:
-    def __init__(self, m: float, n_rotors: int, r_rotors: float):
-        self.g = 9.81
-        self.m = m
-        self.W = m * self.g
-        self.DL = self.W / (n_rotors * 2*pi*pow(r_rotors, 2))
-        self.x = [0,0,0]
-        self.heading = 0
-        self.density = self._get_density(h=0)
-
+    def __init__(self, m: float, soc_init: float, soc_limit: float, mission: list, energy_density: float):
         self.CD = 0.039
         self.Cd = 0.015
         self.A = 8.0  # m^2
-        self.N = 5
-        self.n = 6
+        self.N = 5  # Number of rotor blades
+        self.n = 6  # Number of rotors
         self.c = 0.3
-        self.d_rotor = 2*r_rotors
+        self.r_rotors = 1.3/2
+        self.d_rotor = 2*self.r_rotors
         self.S = 11.0  # m^2
 
-        self.battery = Battery(0.33 * m, total_energy=0.33 * m * 260 / 1000)
+        self.g = 9.81
+        self.m = m
+        self.W = m * self.g
+        self.DL = self.W / (self.n * 2*pi*pow(self.r_rotors, 2))
+        self.x = [0,0,0]
+        self.heading = 0
+        self.altitude = 0
+        self.density = self._get_density(self.altitude)
 
-        # Flight Performance Parameters to set later #TODO: READ FROM models/ INPUT
+        self.battery_m_ratio = 0.33
+        self.total_energy = self.battery_m_ratio * self.m * energy_density / 1000
+        self.energy_total = self.total_energy * (soc_init / 100)  # with soc_init not equal to 100%
+        self.soc_init = soc_init
+        self.soc_limit = soc_limit
+        # self.battery = Battery(0.33 * m, total_energy=0.33 * m * 260 / 1000)
+        self.battery = Battery(self.battery_m_ratio * m,  self.total_energy, soc_init, soc_limit)  # Energy in kiloWatt-Hours (kWH)
+
+        # Flight Performance Parameters
         self.eff_hover = 0.70
         self.eff_cruise = 0.80
         self.eff_climb = 0.75
@@ -59,19 +67,22 @@ class eVTOL:
 
         self.mission = []
 
-        self.planned_mission =[(30, 'taxi'),
-                                (5, 'hover'),
-                                (45, 'vertical climb'),
-                                (15, 'vertical climb'),  # TODO: TRANSITION
-                                (105, 'climb'),
-                                (1500 - 105, 'cruise'),
-                                (105, 'descent'),
-                                (15, 'vertical descent'),  # TODO: Transition reverse
-                                (45, 'vertical descent'),
-                                (5, 'hover'),
-                                (30, 'taxi')]
+        if len(mission) == 0:
+            self.planned_mission =[(30, 'taxi'),
+                                    (5, 'hover'),
+                                    (45, 'vertical climb'),
+                                    (15, 'vertical climb'),  # TODO: TRANSITION
+                                    (105, 'climb'),
+                                    (1500 - 105, 'cruise'),
+                                    (105, 'descent'),
+                                    (15, 'vertical descent'),  # TODO: Transition reverse
+                                    (45, 'vertical descent'),
+                                    (5, 'hover'),
+                                    (30, 'taxi')]
+        else:
+            self.planned_mission = mission
 
-    def initialize_state(self, x_init: tuple, heading: float):
+    def initialize_state(self, x_init: list, heading: float):
         self.x = x_init
         self.heading = heading
         self.density = self._get_density(self.x[2])
@@ -95,7 +106,7 @@ class eVTOL:
             power = self._taxi_power()
         elif mode == 'transition forward':
             power = self._transition_forward_power()
-        elif 'transition reverse':
+        elif mode == 'transition reverse':
             power = self._transition_reverse_power()
         else:
             power = 0
@@ -120,33 +131,21 @@ class eVTOL:
         self.mission.append(tuple([mode, round(time,2), round(power, 0),
                                    round(soc_remaining,2), round(range_remaining,2),
                                    self.x]))
-        #TODO: SELF.X is not copying it is being attached using a pointer and syaing the same throughout appending
         return self.x
 
     def calculate_range(self):
-        range = self._calculate_range()  # already in km
-        # range = range / 1000  # conversion from meters to kilometers
-        return range
+        range_est = self._calculate_range()  # already in km
+        return range_est
 
     def _calculate_range(self):
         method = 2
-        # temp_batt = battery(self.battery.m, self.battery.E_total)
-        power_cruise_left = self.calculate_power(mode='cruise')
-        #TODO: time_left an input
-        time_left_min = 30
-        time_left = time_left_min * 60 / 60 / 60  # 5 minute cruise left
-        # energy_use_est = self.battery._calculate_enefrgy_use(power_cruise_left, time_left)
-        # energy_use_est = 121.40
-        # energy_use_est = 25
-        #TODO: MAKE INPUTS FOR ALTITUDE AND TIMING TO CHANGE MISSION TYPE
+        #TODO: MAKE INPUTS FOR ALTITUDE AND TIMING TO CHANGE MISSION TYPE (  # solve this using surrogatge instead?)
         mission_to_land = [(105, 'descent'),
-                                (45, 'transition reverse'),  # TODO: Transition reverse
+                                (45, 'transition reverse'),
                                 (45, 'vertical descent'),
                                 (5, 'hover'),
                                 (30, 'taxi')]
-        #TODO: CREATE TEMP BATTERY  MODEL AND SIM THESE POWERS/ENERGY REQUIREMENTS
-        # solve this using surrogatge instead?
-        temp_battery = Battery(self.battery.m, self.battery.E_total)
+        temp_battery = Battery(self.battery.m, self.battery.E_total, soc_init=self.soc_init, soc_limit=self.soc_limit)
         temp_battery.E = self.battery.E
         for mission in mission_to_land:
             time = mission[0]
@@ -157,7 +156,6 @@ class eVTOL:
         if method == 1:
             # energy_use_est = self.battery.get_energy_remaining()
             energy_use_est = self.battery.get_useful_energy_remaining()
-
         elif method == 2:
             # energy_use_est = temp_battery.get_energy_remaining()
             energy_use_est = temp_battery.get_useful_energy_remaining()
@@ -166,11 +164,9 @@ class eVTOL:
         energy_density_est = energy_use_est / \
                              (self.battery.m * self.battery.bat_eff * self.battery.DOD) * 1000  #TODO: duoble check power and energy units everywhere
         # energy_density_est = 91.19
-        range = energy_density_est * self.battery.eff_total * \
+        range_est = energy_density_est * self.battery.total_eff * \
                 (1/self.g) * (self.LD_cruise) * (self.battery.m / self.m)
-        #TODO: change varaible name range since already a function range()
-
-        return range
+        return range_est
 
     def _hover_power(self):
         power = self.W / self.eff_hover * sqrt(self.DL / 2 * self._get_density(self.x[2]))
@@ -317,4 +313,40 @@ class eVTOL:
 
     def set_cruise_velocity(self, var1, var2):
         print('NOT SETUP YET')
+
+    # Functions for Optimization Code #
+    def calculate_power_cruise(self, v: float) -> float:
+        """ Calculates the cruise power requred in kW"""
+        self.V_cruise = v
+        power = self._cruise_power()
+        power = power / 1000  # Watts to kW
+        return power
+
+    def fly_mission(self):
+        """ Fly a flight mode for a amount of time (in seconds)"""
+        mission = []
+        soc_remaining = 100
+        E_remaining = self.energy_total
+        for i in range(len(self.planned_mission)):
+            mode = self.planned_mission[i][0]
+            time = self.planned_mission[i][1]
+            time_hrs = time / (60 ** 2)  # conversion of seconds to hours
+            power_used = self.calculate_power(mode)  # kW
+            E_used, soc_used = self.battery.run(power_used, time_hrs)  # kWh, considering total efficiency
+            E_remaining = E_remaining - E_used
+            soc_remaining = soc_remaining - soc_used
+            print('{} mode - Energy: {} kWh, SOC: {} %'.format(mode, round(E_remaining, 2), round(soc_remaining, 2)))
+            mission.append(tuple([mode, E_remaining, soc_remaining]))
+        print('\n')
+        return mission
+
+    def fly_cruise(self, v, time):
+        """ Fly a flight mode for a amount of time (in seconds)"""
+        time_hrs = time / (60 ** 2)  # conversion of seconds to hours
+        power_used = self.calculate_power_cruise(v)  # kW
+        E_used, soc_used = self.battery.calculate_usage(power_used, time_hrs)  # kWh, considering total efficiency
+        # print('{} mode - Energy: {} kWh, SOC: {} %'.format(mode, round(energy_remaining,2), round(soc_remaining,2)))
+        # mission =[tuple([mode, energy_remaining, soc_remaining])]
+        return soc_used
+
 
