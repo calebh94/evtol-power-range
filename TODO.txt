@@ -2,3 +2,10 @@
 
 #TODO: add a parameter file to change model parameters quickly
 
+#TODO: ADD PLOTS OF DATA TO EASILY QUERY
+
+#todo: add cvar risk factor to distributions of power or parameters
+
+
+
+

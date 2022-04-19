@@ -4,6 +4,28 @@ from evtol import eVTOL
 
 import matplotlib.pyplot as plt
 
+# OTHER STUFF STORED HERE FOR NOW
+def unique(list1):
+    # initialize a null list
+    unique_list = []
+    unique_indices = []
+
+    # traverse for all elements
+    i = 0
+    for x in list1:
+        # check if exists in unique_list or not
+        if x not in unique_list:
+            unique_list.append(x)
+            unique_indices.append(i)
+        i+=1
+    return unique_list, unique_indices
+
+def add_legend(ax):
+    h, l = ax.get_legend_handles_labels()
+    l_unique, ind_unique = unique(l)
+    h_unique = [h[i] for i in ind_unique]
+    ax.legend(h_unique, l_unique)
+
 if __name__ == "__main__":
     # Model inputs
     m = 2200  #kg
@@ -58,6 +80,7 @@ if __name__ == "__main__":
     xs = [x[0] for x in states]
     ys = [x[1] for x in states]
     zs = [x[2] for x in states]
+    phases = [x[0] for x in evtol.mission]
 
     plt.plot(xs, ys)
 
@@ -80,6 +103,8 @@ if __name__ == "__main__":
     zs.insert(0,x_init[2])
 
     plot_socs = [100]
+
+    plot_phases = ['taxi']
 
     for time in times:
         new_times = np.linspace(ts[-1], ts[-1]+time,time+1)
@@ -107,7 +132,10 @@ if __name__ == "__main__":
             plot_ranges.append(j)
         for j in new_socs:
             plot_socs.append(j)
+            plot_phases.append(phases[index])
         index+=1
+
+    colors = {'taxi':'red', 'hover':'blue', 'vertical climb':'green', 'transition forward':'orange', 'climb':'purple', 'cruise':'yellow', 'descent':'pink', 'transition reverse':'black', 'vertical descent':'brown'}
 
     fig3 = plt.figure(12)
     plt.plot(ts, xs_new)
@@ -117,18 +145,28 @@ if __name__ == "__main__":
     plt.plot(ts, ys_new)
     plt.title("Y Position over Flight")
     plt.xlabel("Time")
-    fig6 = plt.figure(13)
-    plt.plot(ts, zs_new)
+    fig6, ax6 = plt.subplots()
+    for i in range(len(ts)-1):
+        plt.plot([ts[i],ts[i+1]], [plot_ranges[i],plot_ranges[i+1]], color=colors[plot_phases[i]], label=str(plot_phases[i]))
+    # plt.plot(ts, zs_new)
     plt.title("Altitude over Flight")
-    plt.xlabel("Time")
-    fig5 = plt.figure(14)
+    plt.xlabel("Time (s)")
+    plt.ylabel("Altitude (m)")
+    add_legend(ax6)
+    fig5, ax5 = plt.subplots()
     plt.plot(ts, plot_ranges)
     plt.title("Predicted Range over Flight")
     plt.xlabel("Time")
-    fig7 = plt.figure(17)
-    plt.plot(ts, plot_socs)
+    fig7, ax7 = plt.subplots()
+    for i in range(len(ts)-1):
+        plt.plot([ts[i],ts[i+1]], [plot_socs[i],plot_socs[i+1]], color=colors[plot_phases[i]], label=str(plot_phases[i]))
+    # plt.plot(ts, zs_new)
+    # plt.plot(ts, plot_socs)
     plt.title("SOC over Flight")
-    plt.xlabel("Time")
+    plt.xlabel("Time (s)")
+    plt.ylabel("SOC (%)")
+    add_legend(ax7)
 
     plt.show()
+
 

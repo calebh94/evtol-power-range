@@ -163,6 +163,7 @@ class eVTOL:
             energy_use_est = 0  # OTHER OPTIONS FROM ABOVE MOVE HERE
         energy_density_est = energy_use_est / \
                              (self.battery.m * self.battery.bat_eff * self.battery.DOD) * 1000  #TODO: duoble check power and energy units everywhere
+        #TODO: DEPTH OF DISCHARGE IN TWO PLACES? DOUBLE COUNTED?    (NO THIS IS ENERGY LEFT TO USE, NOT ALREADY USE)
         # energy_density_est = 91.19
         range_est = energy_density_est * self.battery.total_eff * \
                 (1/self.g) * (self.LD_cruise) * (self.battery.m / self.m)
